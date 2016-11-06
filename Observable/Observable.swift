@@ -194,23 +194,31 @@ private class SubscribeDisposable<T> : Disposable {
 
 
 // MARK: Variable
-class Variable<T> {
+public class Variable<T> {
     
-    let valueChange = Observable<(T, T)>()
-    private var value: T
+    private let _subject = Observable<T>()
+    private var _lock = SpinLock()
+    private var _value: T
+    public  var value: T {
+        get {
+            _lock.lock()
+            defer { _lock.unlock()}
+            return _value
+        }
+        set {
+            _lock.lock()
+            _value = newValue
+            _lock.unlock()
+            _subject.onNext(newValue)
+        }
+    }
     
     init(_ initialValue: T) {
-        value = initialValue
+        _value = initialValue
     }
     
-    func set(newValue: T) {
-        let oldValue = value
-        value = newValue
-        valueChange.onNext((oldValue, newValue))
-    }
-    
-    func get() -> T {
-        return value
+    func asObserver() -> Observable<T> {
+        return _subject
     }
 }
 
