@@ -16,23 +16,7 @@ protocol Lock {
 }
 
 typealias SpinLock = NSRecursiveLock
-extension SpinLock : Lock {
-    func performLocked(_ action: () -> Void) {
-        lock(); defer { unlock() }
-        action()
-    }
-    
-    func calculateLocked<T>(_ action: () -> T) -> T {
-        lock(); defer { unlock() }
-        return action()
-    }
-    
-    func calculateLockedOrFail<T>(_ action: () throws -> T) throws -> T {
-        lock(); defer { unlock() }
-        let result = try action()
-        return result
-    }
-}
+extension SpinLock : Lock {}
 
 
 // MARK: - Disposable
@@ -48,7 +32,7 @@ extension Disposable {
 
 public final class DisposeBag {
     
-    private var _lock = SpinLock()
+    private let _lock: Lock = SpinLock()
     private var _disposables = [Disposable]()
     private var _isDisposed = false
     public func insert(_ disposable: Disposable) {
@@ -160,7 +144,8 @@ private class SubscribeDisposable<T> : Disposable {
     
     let handler: SubscribeHandler<T>
     let owner: Observable<T>
-    
+    private var _lock: Lock = SpinLock()
+
     init(handler: SubscribeHandler<T>, owner: Observable<T>){
         self.handler = handler
         self.owner = owner;
@@ -188,6 +173,8 @@ private class SubscribeDisposable<T> : Disposable {
     }
     
     func dispose() {
+        _lock.lock()
+        defer { _lock.unlock()}
         owner.observers = owner.observers.filter { $0 !== self }
     }
 }
@@ -197,7 +184,7 @@ private class SubscribeDisposable<T> : Disposable {
 public class Variable<T> {
     
     private let _subject = Observable<T>()
-    private var _lock = SpinLock()
+    private var _lock: Lock = SpinLock()
     private var _value: T
     public  var value: T {
         get {

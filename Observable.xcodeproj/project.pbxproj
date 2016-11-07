@@ -254,6 +254,7 @@
 				6ADDE33D1DCE5CFC001E112D /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
